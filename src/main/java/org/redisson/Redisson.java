@@ -15,67 +15,22 @@
  */
 package org.redisson;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
-
+import io.netty.util.concurrent.Future;
 import org.redisson.api.RedissonReactiveClient;
 import org.redisson.client.codec.Codec;
 import org.redisson.client.protocol.RedisCommands;
 import org.redisson.cluster.ClusterConnectionManager;
 import org.redisson.command.CommandExecutor;
 import org.redisson.command.CommandSyncService;
-import org.redisson.connection.ConnectionManager;
-import org.redisson.connection.ElasticacheConnectionManager;
-import org.redisson.connection.MasterSlaveConnectionManager;
-import org.redisson.connection.SentinelConnectionManager;
-import org.redisson.connection.SingleConnectionManager;
-import org.redisson.core.ClusterNodesGroup;
-import org.redisson.core.Node;
-import org.redisson.core.NodesGroup;
-import org.redisson.core.RAtomicDouble;
-import org.redisson.core.RAtomicLong;
-import org.redisson.core.RBatch;
-import org.redisson.core.RBitSet;
-import org.redisson.core.RBlockingDeque;
-import org.redisson.core.RBlockingQueue;
-import org.redisson.core.RBloomFilter;
-import org.redisson.core.RBucket;
-import org.redisson.core.RBuckets;
-import org.redisson.core.RCountDownLatch;
-import org.redisson.core.RDeque;
-import org.redisson.core.RGeo;
-import org.redisson.core.RHyperLogLog;
-import org.redisson.core.RKeys;
-import org.redisson.core.RLexSortedSet;
-import org.redisson.core.RList;
-import org.redisson.core.RListMultimap;
-import org.redisson.core.RListMultimapCache;
-import org.redisson.core.RLock;
-import org.redisson.core.RMap;
-import org.redisson.core.RMapCache;
-import org.redisson.core.RPatternTopic;
-import org.redisson.core.RQueue;
-import org.redisson.core.RReadWriteLock;
-import org.redisson.core.RRemoteService;
-import org.redisson.core.RScoredSortedSet;
-import org.redisson.core.RScript;
-import org.redisson.core.RSemaphore;
-import org.redisson.core.RSet;
-import org.redisson.core.RSetCache;
-import org.redisson.core.RSetMultimap;
-import org.redisson.core.RSetMultimapCache;
-import org.redisson.core.RSortedSet;
-import org.redisson.core.RTopic;
+import org.redisson.connection.*;
+import org.redisson.core.*;
+import org.redisson.proxy.CommandExecutorProxy;
 
-import io.netty.util.concurrent.Future;
+import java.io.IOException;
+import java.lang.reflect.Proxy;
+import java.util.*;
+import java.util.Map.Entry;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Main infrastructure class allows to get access
@@ -115,7 +70,8 @@ public class Redisson implements RedissonClient {
         } else {
             throw new IllegalArgumentException("server(s) address(es) not defined!");
         }
-        commandExecutor = new CommandSyncService(connectionManager);
+        CommandSyncService commandSyncService = new CommandSyncService(connectionManager);
+        commandExecutor = (CommandExecutor) Proxy.newProxyInstance(CommandExecutor.class.getClassLoader(), new Class[]{CommandExecutor.class}, new CommandExecutorProxy(commandSyncService));
         evictionScheduler = new EvictionScheduler(commandExecutor);
     }
 
